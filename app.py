@@ -7,11 +7,11 @@ link = "https://b046542f19fac41735.gradio.live"
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
-    return render_template('index.html')
-
-@app.route('/flipkart_home', methods=['GET', 'POST'])
-def flipkart_home():
     return render_template('flipkart_home.html')
+
+# @app.route('/flipkart_home', methods=['GET', 'POST'])
+# def flipkart_home():
+#     return render_template('flipkart_home.html')
 
 @app.route('/flipkart_product', methods=['GET', 'POST'])
 def flipkart_product():
