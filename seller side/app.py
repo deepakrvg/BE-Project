@@ -281,7 +281,7 @@ class InputForm(FlaskForm):
     supply_demand = SelectField('Supply Demand', choices=[('high_supply_low_demand', 'High Supply Low Demand'), ('low_supply_high_demand', 'Low Supply High Demand')], validators=[DataRequired()])
     submit = SubmitField('Submit')
 
-app.config['SECRET_KEY'] = '#inwei233' 
+app.config['SECRET_KEY'] = '' 
 
 
 @app.route('/landing_page', methods=['GET', 'POST'])
