@@ -1,16 +1,34 @@
 # ---------------------------------- Inventory Stock Prediction Individual Product --------------------------------------
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, flash
 import joblib
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import json
+import pyrebase
+from login_required import login_required
 
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+
+config = {
+    "apiKey": "AIzaSyA_tpCvSZz8Qym6IiKLrn_tAo_4p0TMdoA",
+    "authDomain": "conv-outfit-gen.firebaseapp.com",
+    "projectId": "conv-outfit-gen",
+    "storageBucket": "conv-outfit-gen.appspot.com",
+    "messagingSenderId": "429730974583",
+    "appId": "1:429730974583:web:bdda4077a02dac6e1bef72",
+    "measurementId": "G-Y4HFJ7G26P",
+    "databaseURL": ""
+}
+
+firebase = pyrebase.initialize_app(config)
+auth = firebase.auth()
+
+app.secret_key = "xghbfQoKbZeLeWqs"
 
 # Load the trained XGBoost model and preprocessing steps
 model = joblib.load('xgb_model_new.pkl')
@@ -27,6 +45,40 @@ preprocessor = ColumnTransformer(
         ('num', numerical_transformer, numerical_cols),
         ('cat', categorical_transformer, categorical_cols)
     ])
+
+@app.route('/signin', methods=['GET', 'POST'])
+def signin():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        try:
+            user = auth.sign_in_with_email_and_password(email, password)
+            session['user'] = user
+            return redirect('/')
+        except:
+            flash("Invalid credentials")
+            return redirect(url_for('signin'))
+    return render_template('signin.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        try:
+            user = auth.create_user_with_email_and_password(email, password)
+            session['user'] = user
+            return redirect('/')
+        except:
+            flash("Email already exists or other error occurred.")
+            return redirect(url_for('signup'))
+    return render_template('signup.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    session.pop('user')
+    return redirect('/signin')
 
 @app.route('/IM_products')
 def items():
@@ -63,6 +115,7 @@ def predict():
         return jsonify({'error': str(e)})
 
 @app.route("/list")
+@login_required
 def list():
     df = pd.read_csv('inventory_management.csv')
     data = df.to_dict(orient='records')
@@ -149,15 +202,17 @@ def read_csv(file_path):
     return data
 
 @app.route('/vendor_risk_data')
+@login_required
 def vendor_data():
     data = read_csv('vendorManagement.csv')
     print(data[0])
-    return render_template('vendor_data.html', data=data)
+    return render_template('vendor_data.html', data=data[:10])
 
 # --------------------------- Dashboards ---------------------------------------------------
 
 
 @app.route('/inventory_management_dashboard')
+@login_required
 def inventory_management_dashboard():
     inventory_data = [
         {
@@ -197,10 +252,12 @@ def inventory_management_dashboard():
 
 
 @app.route('/')
+@login_required
 def main_dashboard():
     return render_template('main_dashboard.html')
 
 @app.route('/product_display_dashboard')
+@login_required
 def product_display_dashboard():
     return render_template('product_display_dashboard.html')
 
@@ -221,21 +278,24 @@ class InputForm(FlaskForm):
     month_index = SelectField('Month', choices=[('1', 'January'), ('2', 'February'), ('3', 'March'), ('4', 'April'), ('5', 'May'), ('6', 'June'), ('7', 'July'), ('8', 'August'), ('9', 'September'), ('10', 'October'), ('11', 'November'), ('12', 'December')], validators=[DataRequired()])
     market_trend = SelectField('Market Trend', choices=[('neutral', 'Neutral'), ('positive', 'Positive'), ('negative', 'Negative')], validators=[DataRequired()])
     competitor_pricing = SelectField('Competitor Pricing', choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High')], validators=[DataRequired()])
-    supply_demand = SelectField('Supply Demand', choices=[('high_supply_low_demand', 'High Supply Low Demand'), ('balanced_supply_demand', 'Balanced Supply Demand'), ('low_supply_high_demand', 'Low Supply High Demand')], validators=[DataRequired()])
+    supply_demand = SelectField('Supply Demand', choices=[('high_supply_low_demand', 'High Supply Low Demand'), ('low_supply_high_demand', 'Low Supply High Demand')], validators=[DataRequired()])
     submit = SubmitField('Submit')
 
 app.config['SECRET_KEY'] = '#inwei233' 
 
 
 @app.route('/landing_page', methods=['GET', 'POST'])
+@login_required
 def landing_page():
     return render_template('landing_page.html')
 
 @app.route('/dashboard', methods=['GET', 'POST'])
+@login_required
 def dashboard():
     return render_template('index2.html')
 
 @app.route('/products', methods=['GET', 'POST'])
+@login_required
 def products():
     form = InputForm()
     if form.validate_on_submit():
